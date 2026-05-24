@@ -242,8 +242,8 @@ export default function MarketFightArena() {
     };
 
     const renderLoop = () => {
-      e.globalTime++;
       const e = engineRef.current;
+      e.globalTime++;      
 
       // Handle Screen Shake calculation
       let dx = 0; let dy = 0;
