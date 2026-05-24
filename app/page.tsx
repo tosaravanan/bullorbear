@@ -99,7 +99,7 @@ export default function MarketFightArena() {
         });
       }
 
-      // Add a kinetic slice effect
+      // Add a kinetic slice effects
       e.slashes.push({
         x: midX - 20,
         y: midY,
