@@ -70,6 +70,7 @@ export default function MarketFightArena() {
 
     // 3. Safe to parse now that we know it's a structural string match
     const data = JSON.parse(rawText);
+    console.warn("✅ Cache reader received data:", data);
     
     if (data && data.price) {
       console.log("🎯 Live Redis Update Parsed:", data.price);
