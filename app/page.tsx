@@ -57,6 +57,9 @@ export default function MarketFightArena() {
       });
       
       const data = await response.json();
+
+      // --- DIAGNOSTIC LOG ---
+      console.log("🚨 FRONTEND RECEIVED FROM REDIS:", data);
       
       // Force calculation updates for state
       if (data && data.price) {
