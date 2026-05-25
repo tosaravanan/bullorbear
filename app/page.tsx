@@ -44,119 +44,43 @@ export default function MarketFightArena() {
     globalTime: 0
   });
 
-  // 1. Highly Sensitive Adaptive Market Tick Simulator
   useEffect(() => {
-    const runAdaptiveTick = () => {
-      // Generate realistic, random market action
-      const isUpTick = Math.random() > 0.46; 
-      
-      // Volatility Scaling: Most ticks are small, but occasionally a massive institutional block hits
-      const volatilitySeed = Math.random();
-      let tickSize = 0;
-      if (volatilitySeed > 0.92) {
-        tickSize = (Math.random() * 35) + 15; // Massive breakout / crash spike
-      } else if (volatilitySeed > 0.60) {
-        tickSize = (Math.random() * 12) + 4;  // Standard active momentum
-      } else {
-        tickSize = (Math.random() * 3) + 0.2;  // Minor high-frequency noise
-      }
-
-      setNiftyPrice((prev) => {
-        const nextPrice = isUpTick ? prev + tickSize : prev - tickSize;
-        const change = nextPrice - 23700.00;
-        const percent = (change / 23700.00) * 100;
-
-        setPriceChange(change);
-        setChangePercent(percent);
-
-        // --- ADVANCED PROPULSION SENSITIVITY ---
-        const e = engineRef.current;
-        
-        // Calculate a sensitivity multiplier based on how big the point move is
-        // A 1-point move = 1x force. A 30-point move = 5x force!
-        const intensityMultiplier = Math.min(6, Math.max(0.5, tickSize / 6));
-
-        if (isUpTick) {
-          // BULL ATTACKS: Scale jump distance, screen shake, and speed by the tick intensity
-          e.targetBullX = e.baseBullX + (80 * intensityMultiplier);
-          e.targetBearX = e.baseBearX + (30 * intensityMultiplier);
-          e.screenShake = 4 * intensityMultiplier;
-
-          // Scale particle burst counts dynamically
-          const particleCount = Math.floor(10 * intensityMultiplier);
-          const midX = (e.bullX + e.bearX) / 2;
-          
-          for (let i = 0; i < particleCount; i++) {
-            e.particles.push({
-              x: midX,
-              y: 220 + (Math.random() - 0.5) * 40,
-              vx: (Math.random() * (5 * intensityMultiplier)) - 1,
-              vy: (Math.random() - 0.5) * (8 * intensityMultiplier),
-              size: Math.random() * 3 + (1 * intensityMultiplier),
-              alpha: 1,
-              color: Math.random() > 0.25 ? "#22c55e" : "#ffffff",
-              decay: 0.015 / intensityMultiplier
-            });
-          }
-
-          // Only commit a visual energy slash slice if it's a true high-volume break
-          if (tickSize > 6) {
-            e.slashes.push({
-              x: midX - 10,
-              y: 220,
-              type: "bull",
-              alpha: 1,
-              points: [{dx: -30, dy: -40}, {dx: 30 * intensityMultiplier, dy: 0}, {dx: -30, dy: 40}]
-            });
-          }
-
-        } else {
-          // BEAR ATTACKS: Scale metrics identically for down-ticks
-          e.targetBearX = e.baseBearX - (80 * intensityMultiplier);
-          e.targetBullX = e.baseBullX - (30 * intensityMultiplier);
-          e.screenShake = 4 * intensityMultiplier;
-
-          const particleCount = Math.floor(10 * intensityMultiplier);
-          const midX = (e.bullX + e.bearX) / 2;
-
-          for (let i = 0; i < particleCount; i++) {
-            e.particles.push({
-              x: midX,
-              y: 220 + (Math.random() - 0.5) * 40,
-              vx: (Math.random() * (-5 * intensityMultiplier)) + 1,
-              vy: (Math.random() - 0.5) * (8 * intensityMultiplier),
-              size: Math.random() * 3 + (1 * intensityMultiplier),
-              alpha: 1,
-              color: Math.random() > 0.25 ? "#ef4444" : "#b91c1c",
-              decay: 0.015 / intensityMultiplier
-            });
-          }
-
-          if (tickSize > 6) {
-            e.slashes.push({
-              x: midX + 10,
-              y: 220,
-              type: "bear",
-              alpha: 1,
-              points: [{dx: 30, dy: -40}, {dx: -30 * intensityMultiplier, dy: 0}, {dx: 30, dy: 40}]
-            });
-          }
+  const fetchCachedMarketData = async () => {
+    try {
+      // Add 'no-store' to stop Next.js/Browser from caching this API response
+      const response = await fetch('/api/market-cache-reader', {
+        cache: 'no-store', 
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
         }
-
-        return nextPrice;
       });
+      
+      const data = await response.json();
+      
+      // Force calculation updates for state
+      if (data && data.price) {
+        setNiftyPrice(data.price);
+        setPriceChange(data.change);
+        
+        // Calculate percentage shift dynamically based on base value
+        const basePrice = 23700.00; 
+        const percent = (data.change / basePrice) * 100;
+        setChangePercent(percent);
+      }
+    } catch (err) {
+      console.error("Frontend cache extraction fault:", err);
+    }
+  };
 
-      setLastUpdated(new Date().toLocaleTimeString());
+  // Poll the cache route every 3 seconds for instant changes
+  const interval = setInterval(fetchCachedMarketData, 3000);
+  
+  // Run once immediately on page load so it doesn't wait 3 seconds to update
+  fetchCachedMarketData(); 
 
-      // Break up predictable pacing by scheduling the next interval randomly 
-      // (Mimics real, chaotic electronic trading book flow)
-      const nextIntervalDelay = (Math.random() * 2200) + 400; // Anywhere from 0.4s to 2.6s
-      timeoutId = setTimeout(runAdaptiveTick, nextIntervalDelay);
-    };
-
-    let timeoutId = setTimeout(runAdaptiveTick, 1000);
-    return () => clearTimeout(timeoutId);
-  }, []);
+  return () => clearInterval(interval);
+}, []);
 
   const triggerStrike = (aggressor: "bull" | "bear") => {
     const e = engineRef.current;
