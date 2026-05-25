@@ -46,13 +46,13 @@ export default function MarketFightArena() {
 
   useEffect(() => {
   const fetchCachedMarketData = async () => {
-  try {
-    const response = await fetch('/api/market-cache-reader', { 
-      cache: 'no-store',
-      headers: {
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
-      }
+    try {
+      const response = await fetch('/api/cron/sync-market', {
+    cache: 'no-store',
+    headers: {
+      'Pragma': 'no-cache',
+      'Cache-Control': 'no-cache'
+    }
     });
 
     // 1. If the server throws a 404 or 500, catch it before parsing JSON
