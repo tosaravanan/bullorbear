@@ -29,7 +29,10 @@ export async function GET() {
     const payload = {
       price: livePrice,
       change: pointChange,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour12: true
+      })
     };
 
     // Save straight to your Upstash Cache Storage
