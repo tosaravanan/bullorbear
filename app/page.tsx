@@ -46,34 +46,44 @@ export default function MarketFightArena() {
 
   useEffect(() => {
   const fetchCachedMarketData = async () => {
-    try {
-      // Add 'no-store' to stop Next.js/Browser from caching this API response
-      const response = await fetch('/api/market-cache-reader', {
-        cache: 'no-store', 
-        headers: {
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      const data = await response.json();
-
-      // --- DIAGNOSTIC LOG ---
-      console.log("🚨 FRONTEND RECEIVED FROM REDIS:", data);
-      
-      // Force calculation updates for state
-      if (data && data.price) {
-        setNiftyPrice(data.price);
-        setPriceChange(data.change);
-        
-        // Calculate percentage shift dynamically based on base value
-        const basePrice = 23700.00; 
-        const percent = (data.change / basePrice) * 100;
-        setChangePercent(percent);
+  try {
+    const response = await fetch('/api/market-cache-reader', { 
+      cache: 'no-store',
+      headers: {
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
       }
-    } catch (err) {
-      console.error("Frontend cache extraction fault:", err);
+    });
+
+    // 1. If the server throws a 404 or 500, catch it before parsing JSON
+    if (!response.ok) {
+      console.warn(`⚠️ Cache reader backend returned status: ${response.status}`);
+      return;
     }
+
+    // 2. Read raw response text first to check for structural validity
+    const rawText = await response.text();
+    if (!rawText || rawText.trim() === "" || rawText.startsWith("<!DOCTYPE")) {
+      console.warn("⚠️ Received non-JSON or blank HTML payload from serverless cache.");
+      return;
+    }
+
+    // 3. Safe to parse now that we know it's a structural string match
+    const data = JSON.parse(rawText);
+    
+    if (data && data.price) {
+      console.log("🎯 Live Redis Update Parsed:", data.price);
+      setNiftyPrice(data.price);
+      setPriceChange(data.change);
+      
+      const basePrice = 23700.00;
+      const percent = (data.change / basePrice) * 100;
+      setChangePercent(percent);
+    }
+  } catch (err) {
+    // This block will now cleanly intercept syntax deviations without stopping component routines
+    console.error("❌ Frontend cache extraction fault handled safely:", err);
+  }
   };
 
   // Poll the cache route every 3 seconds for instant changes
