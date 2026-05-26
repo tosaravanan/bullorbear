@@ -30,6 +30,9 @@ export default function MarketFightArena() {
   const [changePercent, setChangePercent] = useState<number>(0.05);
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
+  const [flashClass, setFlashClass] = useState("");
+  const prevPriceRef = useRef(niftyPrice);
+  
   // Animation Engine Refs
   const engineRef = useRef({
     bullX: 220,
