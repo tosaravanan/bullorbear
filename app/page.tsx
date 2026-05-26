@@ -45,46 +45,41 @@ export default function MarketFightArena() {
   });
 
   useEffect(() => {
+  // 1. Add a ref at the top of your component alongside your other useStates
+  const prevPriceRef = useRef(niftyPrice); 
+  const [flashClass, setFlashClass] = useState("");
+
+  // 2. Update your existing fetch loop inside useEffect
   const fetchCachedMarketData = async () => {
     try {
-      const response = await fetch('/api/cron/sync-market', {
-    cache: 'no-store',
-    headers: {
-      'Pragma': 'no-cache',
-      'Cache-Control': 'no-cache'
-    }
-    });
-
-    // 1. If the server throws a 404 or 500, catch it before parsing JSON
-    if (!response.ok) {
-      console.warn(`⚠️ Cache reader backend returned status: ${response.status}`);
-      return;
-    }
-
-    // 2. Read raw response text first to check for structural validity
-    const rawText = await response.text();
-    if (!rawText || rawText.trim() === "" || rawText.startsWith("<!DOCTYPE")) {
-      console.warn("⚠️ Received non-JSON or blank HTML payload from serverless cache.");
-      return;
-    }
-
-    // 3. Safe to parse now that we know it's a structural string match
-    const data = JSON.parse(rawText);
-    console.warn("✅ Cache reader received data:", data);
-    
-    if (data && data.price) {
-      console.log("🎯 Live Redis Update Parsed:", data.price);
-      setNiftyPrice(data.price);
-      setPriceChange(data.change);
+      const response = await fetch('/api/cron/sync-market', { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
       
-      const basePrice = 23700.00;
-      const percent = (data.change / basePrice) * 100;
-      setChangePercent(percent);
+      if (data && data.price) {
+        const newPrice = data.price;
+        const oldPrice = prevPriceRef.current;
+
+        // 🔴 COMPARE PRICES TO TRIGGER ANIMATION
+        if (newPrice > oldPrice) {
+          setFlashClass("text-emerald-400 scale-105 transition-all duration-300"); // Up movement
+        } else if (newPrice < oldPrice) {
+          setFlashClass("text-rose-400 scale-105 transition-all duration-300");    // Down movement
+        }
+
+        // Remove the animation color/scale after 800ms
+        setTimeout(() => setFlashClass(""), 800);
+
+        // Update your states normally
+        setNiftyPrice(newPrice);
+        setPriceChange(data.change);
+        
+        // Update the reference point for the next check
+        prevPriceRef.current = newPrice;
+      }
+    } catch (err) {
+      console.error("Cache fetch error:", err);
     }
-  } catch (err) {
-    // This block will now cleanly intercept syntax deviations without stopping component routines
-    console.error("❌ Frontend cache extraction fault handled safely:", err);
-  }
   };
 
   // Poll the cache route every 3 seconds for instant changes
@@ -392,8 +387,8 @@ export default function MarketFightArena() {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-mono font-bold tracking-tight text-white drop-shadow-md">
-              {niftyPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className={`text-5xl font-bold tracking-tight transition-all duration-300 ${flashClass || 'text-white'}`}>
+              {niftyPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             <div className={`text-sm font-bold font-mono tracking-wide mt-0.5 ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
               {isPositive ? "▲ +" : "▼ "} {priceChange.toFixed(2)} ({changePercent.toFixed(2)}%)
